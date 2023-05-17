@@ -63,7 +63,7 @@ public:
         addr.sin_addr.s_addr = inet_addr("127.0.0.1");
         addr.sin_port = htons(1111);
         addr.sin_family = AF_INET;
-        
+
         this->connect_to_server();
     }
     ~Client() {
@@ -103,7 +103,7 @@ public:
         for (int i = 0; i < data.size(); i++) {
             send(Connection, (char*)data[i].data(), sizeof(T) * data.size(), 0);
         }
-        
+
     }
 
     void send_configuration(size_t rows, size_t cols, size_t threads) {
@@ -117,7 +117,7 @@ public:
         //return this->receive_command(Connection, std::string("1"));
     }
 
-    
+
     bool receive_command(std::string command) {
         std::vector<char> buffer(1024);
         recv(Connection, (char*)buffer.data(), sizeof(char) * buffer.size(), 0);
@@ -130,15 +130,25 @@ public:
     }
 
     bool ping_pong() {
-        this->send_command("PING");
-        std::cout << "PING sent. Waiting for PONG... ";
-        if (!this->receive_command("PONG")) {
-            std::cout << "No PONG received." << std::endl;
-            return false;
-        }
-        std::cout << "PONG received." << std::endl;
+        //u_long mode = 1; // для Windows
+        //ioctlsocket(Connection, FIONBIO, &mode);
+        bool pong = false;
+        //while (!pong) {
+            this->send_command("PING");
+            std::cout << "PING sent. Waiting for PONG... ";
+            if (!this->receive_command("PONG")) {
+                std::cout << "No PONG received." << std::endl;
+                return false;
+            }
+            else {
+                std::cout << "PONG received." << std::endl;
+                //mode = 0;
+                //ioctlsocket(Connection, FIONBIO, &mode);
+                return true;
+            }   
+        //}
     }
-    
+
     template <typename T>
     Matrix<T> process_matrix_on_server(Matrix<T> matrix, size_t threads) {
         //this->connect_to_server();
@@ -148,26 +158,38 @@ public:
 
         int rows = matrix.size();
         int cols = matrix[0].size();
-        
+
         this->send_configuration(rows, cols, threads);
         std::cout << "Configuration sent. ";
         this->send_data(matrix);
         std::cout << "Data sent. ";
         this->send_command("START");
         std::cout << "START command sent. ";
-        //this->send_command("STATUS");
-        /*if (this->receive_command("0")) {
-            std::cout << "Not yet\n";
-            
-        }*/
-        /*else if (this->receive_command("1")) {
-            std::cout << "Yes\n";
-            this->receive_matrix(matrix, rows);
-        }*/
-        
+        bool done = false;
+        u_long mode = 1; // для Windows
+        std::cout << "Check status.\n";
+        this->send_command("STATUS");
+
+        ioctlsocket(Connection, FIONBIO, &mode);
+        while (!done) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::cout << "Let's check status.\n";
+            if (this->receive_command("1")) {
+                std::cout << "Done\n";
+                done = true;
+                break;
+            }
+            else {
+                std::cout << "Not yet\n";
+            }
+            this->send_command("STATUS");
+        }
+        mode = 0;
+        ioctlsocket(Connection, FIONBIO, &mode);
+        this->send_command("GET");
         this->receive_matrix(matrix, rows);
         std::cout << "Data received.\n\n";
-        
+
         return matrix;
     }
 };
@@ -182,19 +204,20 @@ int main()
     printMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
     //client.connect_to_server();
     printMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
+    printMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
     /*while (true) {
         std::chrono::seconds duration(rand() % 6);
         this_thread::sleep_for(duration);
         client.server_request();
     }});*/
-    
+
     //while (true) {
-        
+
         /*for (auto x : clients) {
             x.server_request();
-            
+
         }*/
-    //}
-    
+        //}
+
     return 0;
 }
