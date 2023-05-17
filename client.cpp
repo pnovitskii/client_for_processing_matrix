@@ -9,42 +9,51 @@
 #include <functional>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <sstream>
 
 template <typename T>
 using Matrix = std::vector<std::vector<T>>;
 
 #pragma warning(disable: 4996)
 
-template <typename T>
-Matrix<T> generateRandomMatrix(size_t size) {
-    Matrix<T> matrix(size, std::vector<T>(size));
-    for (int i = 0; i < size; i++)
-        for (int j = 0; j < size; j++)
-            matrix[i][j] = (rand() % 200 - 100) + (rand() % 10) / 10.f;
-    for (auto x : matrix) {
-        for (auto y : x) {
-            std::cout << std::setw(5) << y << " ";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
-    return matrix;
-}
+std::mutex output_mutex;
 
 template <typename T>
 void printMatrix(Matrix<T> matrix) {
+    std::ostringstream oss;
     if (matrix.size() == 0) {
         std::cout << "Matrix empty." << std::endl;
         return;
     }
     for (auto x : matrix) {
         for (auto y : x) {
-            std::cout << std::setw(5) << y << " ";
+            oss << std::setw(5) << y << " ";
         }
-        std::cout << "\n";
+        oss << "\n";
     }
-    std::cout << "\n";
+    oss << "\n";
+    std::cout << oss.str();
 }
+
+template <typename T>
+Matrix<T> generateRandomMatrix(size_t size) {
+    
+    Matrix<T> matrix(size, std::vector<T>(size));
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            matrix[i][j] = (rand() % 200 - 100) + (rand() % 10) / 10.f;
+            //oss << std::setw(5) << matrix[i][j] << " ";
+        }  
+        //oss << "\n";
+    }
+    //oss << "\n";
+    //std::cout << oss.str();
+    printMatrix(matrix);
+    return matrix;
+}
+
+
 
 class Client {
 private:
@@ -135,7 +144,7 @@ public:
         bool pong = false;
         //while (!pong) {
             this->send_command("PING");
-            std::cout << "PING sent. Waiting for PONG... ";
+            std::cout << "PING sent. Waiting for PONG... \n";
             if (!this->receive_command("PONG")) {
                 std::cout << "No PONG received." << std::endl;
                 return false;
@@ -199,6 +208,12 @@ int main()
     srand(time(0));
     //vector<Client> clients(3);
     Client client;
+    std::thread x([]() {
+        Client c;
+        printMatrix(c.process_matrix_on_server(generateRandomMatrix<int>(4), 2));
+        printMatrix(c.process_matrix_on_server(generateRandomMatrix<int>(4), 2));
+        });
+    x.detach();
     //client.connect_to_server();
 
     printMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
