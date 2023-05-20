@@ -20,11 +20,11 @@ using Matrix = std::vector<std::vector<T>>;
 std::mutex output_mutex;
 
 template <typename T>
-void printMatrix(Matrix<T> matrix) {
+std::string getStringOfMatrix(Matrix<T> matrix) {
     std::ostringstream oss;
     if (matrix.size() == 0) {
         std::cout << "Matrix empty." << std::endl;
-        return;
+        return "";
     }
     for (auto x : matrix) {
         for (auto y : x) {
@@ -33,7 +33,8 @@ void printMatrix(Matrix<T> matrix) {
         oss << "\n";
     }
     oss << "\n";
-    std::cout << oss.str();
+    return oss.str();
+    //std::cout << oss.str();
 }
 
 template <typename T>
@@ -49,7 +50,9 @@ Matrix<T> generateRandomMatrix(size_t size) {
     }
     //oss << "\n";
     //std::cout << oss.str();
-    printMatrix(matrix);
+    std::ostringstream oss;
+    oss << "Initial matrix:\n" << getStringOfMatrix(matrix);
+    std::cout << oss.str();
     return matrix;
 }
 
@@ -206,20 +209,21 @@ public:
 int main()
 {
     srand(time(0));
-    //vector<Client> clients(3);
+    
     Client client;
+
     std::thread x([]() {
         Client c;
-        printMatrix(c.process_matrix_on_server(generateRandomMatrix<int>(4), 2));
-        printMatrix(c.process_matrix_on_server(generateRandomMatrix<int>(4), 2));
+        std::cout << getStringOfMatrix(c.process_matrix_on_server(generateRandomMatrix<int>(4), 2));
+        std::cout << getStringOfMatrix(c.process_matrix_on_server(generateRandomMatrix<int>(4), 2));
         });
     x.detach();
-    //client.connect_to_server();
+    
 
-    printMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
+    std::cout << getStringOfMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
     //client.connect_to_server();
-    printMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
-    printMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
+    std::cout << getStringOfMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
+    std::cout << getStringOfMatrix(client.process_matrix_on_server(generateRandomMatrix<int>(5), 2));
     /*while (true) {
         std::chrono::seconds duration(rand() % 6);
         this_thread::sleep_for(duration);
